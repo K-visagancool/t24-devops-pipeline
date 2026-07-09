@@ -3,7 +3,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "T24 Transact - Version 1.0"
+    return "T24 Transact - Version 2.0 - Deployed via CI/CD Pipeline"
 
 @app.route('/health')
 def health():
