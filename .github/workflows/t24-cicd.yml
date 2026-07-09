@@ -1,0 +1,54 @@
+name: T24 Build and Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 't24-deploy/**'
+  workflow_dispatch:
+
+env:
+  ACR_NAME: t24acr1958
+  IMAGE_NAME: t24-app
+  RESOURCE_GROUP: aks-learning-rg
+  AKS_CLUSTER: aks-learning-cluster
+  NAMESPACE: t24
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and push image to ACR
+        run: |
+          az acr login --name $ACR_NAME
+          docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }} ./app
+          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group $RESOURCE_GROUP \
+            --name $AKS_CLUSTER
+
+      - name: Deploy to AKS via Helm
+        run: |
+          helm upgrade t24-app ./t24-deploy \
+            --namespace $NAMESPACE \
+            --create-namespace \
+            --set image.repository=$ACR_NAME.azurecr.io/$IMAGE_NAME \
+            --set image.tag=${{ github.sha }} \
+            --wait
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n $NAMESPACE
+          kubectl get svc -n $NAMESPACE

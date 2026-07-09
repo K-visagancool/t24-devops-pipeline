@@ -1,0 +1,6 @@
+T24 App deployed!
+
+Get the LoadBalancer IP:
+  kubectl get svc {{ include "t24-deploy.fullname" . }}
+
+Access the app at http://<EXTERNAL-IP>
